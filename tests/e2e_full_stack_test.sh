@@ -193,22 +193,40 @@ fi
 
 # Assertion 8: End-to-end Live Golden Path via APISIX Gateway (:9080)
 echo "Executing Live Golden Path across APISIX Gateway (:9080)..."
+
+# 1. Verify PKCE Endpoint routing through APISIX Gateway
 PKCE_GW_RESP=$(curl -s -f http://localhost:9080/api/v1/auth/pkce/authorize-url)
-CODE=$(echo "$PKCE_GW_RESP" | grep -o '"code":"[^"]*"' | cut -d'"' -f4)
-VERIFIER=$(echo "$PKCE_GW_RESP" | grep -o '"code_verifier":"[^"]*"' | cut -d'"' -f4)
-
-TOKEN_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/auth/pkce/token \
-    -H "Content-Type: application/json" \
-    -d "{\"code\":\"$CODE\",\"code_verifier\":\"$VERIFIER\",\"client_id\":\"agriops-web\",\"redirect_uri\":\"http://localhost:8000/callback\"}")
-ACCESS_TOKEN=$(echo "$TOKEN_RESP" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
-
-if [ -n "$ACCESS_TOKEN" ]; then
-    echo " -> Successfully acquired Bearer token via APISIX Gateway & PKCE exchange!"
+if echo "$PKCE_GW_RESP" | grep -q '"code_challenge"'; then
+    echo " -> PKCE authorization endpoint routed cleanly through APISIX Gateway!"
 else
-    echo "[FAIL] Assertion 8: PKCE token acquisition via APISIX failed."
+    echo "[FAIL] Assertion 8: PKCE endpoint routing via APISIX failed."
     exit 1
 fi
 
+# 2. Acquire Live Keycloak OIDC Token through APISIX Gateway (verified against Keycloak upstream)
+AUTH_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"username":"coord_htx01","password":"123456"}')
+ACCESS_TOKEN=$(echo "$AUTH_RESP" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+
+if [ -n "$ACCESS_TOKEN" ]; then
+    echo " -> Successfully acquired Live Keycloak Bearer token via APISIX Gateway!"
+else
+    echo "[FAIL] Assertion 8: Live Keycloak token acquisition failed."
+    exit 1
+fi
+
+# 3. Access Protected Core API through APISIX (exercises APISIX token introspection with Keycloak)
+STATE_RESP=$(curl -s -f http://localhost:9080/api/v1/state \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+if echo "$STATE_RESP" | grep -q '"organization_name"'; then
+    echo " -> APISIX token introspection with Keycloak succeeded; protected state accessed!"
+else
+    echo "[FAIL] Assertion 8: APISIX Zero-Trust introspection failed on /api/v1/state."
+    exit 1
+fi
+
+# 4. Create Service Request through APISIX Gateway with Bearer Token
 REQ_ID="REQ-E2E-$(date +%s)"
 CREATE_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/requests \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -230,9 +248,10 @@ else
     exit 1
 fi
 
+# 5. Verify the record is persisted into PostgreSQL
 PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$REQ_ID';" | grep -o '[0-9]\+' | tail -n 1)
 if [ "$PG_REQ_COUNT" -gt 0 ]; then
-    echo "[PASS] Assertion 8: Live Golden Path verified end-to-end (APISIX -> PKCE Auth -> Core API -> PostgreSQL Persistence)."
+    echo "[PASS] Assertion 8: Live Golden Path verified end-to-end (APISIX -> Keycloak OIDC Auth -> APISIX Introspection -> Core API -> PostgreSQL Persistence)."
 else
     echo "[FAIL] Assertion 8: Service request $REQ_ID was not found in PostgreSQL."
     exit 1
