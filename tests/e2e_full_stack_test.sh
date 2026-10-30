@@ -165,7 +165,7 @@ FARMER_BA_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagr
     SET LOCAL app.current_user_role = 'FARMER';
     SET LOCAL app.current_user_id = 'usr_farmer_ba';
     SELECT COUNT(*) FROM service_requests;
-" | tr -d '[:space:]')
+" | grep -o '[0-9]\+' | tail -n 1)
 echo "Farmer Ba visible requests: $FARMER_BA_SEES"
 
 FARMER_NAM_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios_app -d openagrios_db -t -c "
@@ -173,7 +173,7 @@ FARMER_NAM_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openag
     SET LOCAL app.current_user_role = 'FARMER';
     SET LOCAL app.current_user_id = 'usr_farmer_nam';
     SELECT COUNT(*) FROM service_requests;
-" | tr -d '[:space:]')
+" | grep -o '[0-9]\+' | tail -n 1)
 echo "Farmer Nam visible requests: $FARMER_NAM_SEES"
 
 SOCTRANG_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios_app -d openagrios_db -t -c "
@@ -181,10 +181,10 @@ SOCTRANG_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagri
     SET LOCAL app.current_user_role = 'COORDINATOR';
     SET LOCAL app.current_user_id = 'usr_coord_02';
     SELECT COUNT(*) FROM service_requests;
-" | tr -d '[:space:]')
+" | grep -o '[0-9]\+' | tail -n 1)
 echo "Soc Trang Coordinator visible requests: $SOCTRANG_SEES"
 
-if [ "$SOCTRANG_SEES" -eq 0 ]; then
+if [ "$FARMER_BA_SEES" -gt 0 ] && [ "$FARMER_NAM_SEES" -eq 0 ] && [ "$SOCTRANG_SEES" -eq 0 ]; then
     echo "[PASS] Assertion 7: Live Multi-Tenant & Multi-User RLS verified on PostgreSQL (app.current_user_id & app.current_org_id isolation enforced)."
 else
     echo "[FAIL] Assertion 7: RLS isolation leak detected."
@@ -230,7 +230,7 @@ else
     exit 1
 fi
 
-PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$REQ_ID';" | tr -d '[:space:]')
+PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$REQ_ID';" | grep -o '[0-9]\+' | tail -n 1)
 if [ "$PG_REQ_COUNT" -gt 0 ]; then
     echo "[PASS] Assertion 8: Live Golden Path verified end-to-end (APISIX -> PKCE Auth -> Core API -> PostgreSQL Persistence)."
 else
