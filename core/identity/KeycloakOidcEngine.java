@@ -235,6 +235,8 @@ public final class KeycloakOidcEngine {
     public static final String DEFAULT_INTROSPECTION_CLIENT_SECRET =
             System.getenv().getOrDefault("KEYCLOAK_INTROSPECTION_CLIENT_SECRET",
                     System.getenv().getOrDefault("KEYCLOAK_CLIENT_SECRET", "agriops-gateway-secret-2026"));
+    public static final String DEFAULT_CLIENT_SECRET =
+            System.getenv().getOrDefault("KEYCLOAK_CLIENT_SECRET", "agriops-client-secret-2026");
 
 
 
@@ -1634,10 +1636,8 @@ public final class KeycloakOidcEngine {
 
 
             String formBody = "grant_type=password"
-
-
-
                     + "&client_id=" + URLEncoder.encode(clientId != null ? clientId : "agriops-web", StandardCharsets.UTF_8)
+                    + "&client_secret=" + URLEncoder.encode(DEFAULT_CLIENT_SECRET, StandardCharsets.UTF_8)
 
 
 

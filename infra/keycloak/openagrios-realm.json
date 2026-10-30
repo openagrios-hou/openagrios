@@ -42,7 +42,7 @@
       "clientId": "agriops-web",
       "name": "AgriOps Multi-Role RTS Workspace",
       "enabled": true,
-      "publicClient": true,
+      "publicClient": false,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "redirectUris": [
@@ -67,7 +67,9 @@
             "jsonType.label": "String"
           }
         }
-      ]
+      ],
+      "secret": "agriops-client-secret-2026",
+      "clientAuthenticatorType": "client-secret"
     },
     {
       "clientId": "agriops-gateway",
