@@ -10,6 +10,16 @@ echo "==========================================================================
 
 # Ensure cleanup on script exit
 cleanup() {
+    echo "============================================================================"
+    echo "CONTAINER LOGS INSPECTION BEFORE TEARDOWN:"
+    echo "============================================================================"
+    echo "--- CORE API LOGS ---"
+    docker compose -f compose.yaml logs --tail 100 core-api || true
+    echo "--- POSTGRES LOGS ---"
+    docker compose -f compose.yaml logs --tail 30 postgres || true
+    echo "--- KEYCLOAK LOGS ---"
+    docker compose -f compose.yaml logs --tail 30 keycloak || true
+    echo "============================================================================"
     echo "Tearing down Docker Compose containers and volumes..."
     docker compose -f compose.yaml down -v --remove-orphans || true
 }
@@ -76,7 +86,7 @@ for i in {1..30}; do
 done
 
 echo "[3/5] Docker container process inspection:"
-docker compose -f compose.yaml ps
+docker compose -f compose.yaml ps -a
 
 echo "[4/5] Executing Live Stack Integration Assertions..."
 
