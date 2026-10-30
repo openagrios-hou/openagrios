@@ -124,7 +124,7 @@ fi
 # Assertion 3: Verify dedicated openagrios_app non-superuser role
 APP_ROLE_CHECK=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='openagrios_app';")
 echo "Role openagrios_app permissions (rolsuper, rolbypassrls): $APP_ROLE_CHECK"
-if echo "$APP_ROLE_CHECK" | grep -q 'f | f'; then
+if echo "$APP_ROLE_CHECK" | grep -E 'f[[:space:]]+\|[[:space:]]+f'; then
     echo "[PASS] Assertion 3: Dedicated openagrios_app role verified (NOSUPERUSER, NOBYPASSRLS)."
 else
     echo "[FAIL] Assertion 3: openagrios_app role permissions mismatch."
