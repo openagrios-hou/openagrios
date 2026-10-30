@@ -873,68 +873,8 @@ public final class OpenAgriOsServer {
             }
 
             if ("/api/v1/auth/pkce/token".equals(path)) {
-                String code = String.valueOf(body.getOrDefault("code", ""));
-                String codeVerifier = String.valueOf(body.getOrDefault("code_verifier", ""));
-                String redirectUri = String.valueOf(body.getOrDefault("redirect_uri", "http://localhost:8000/callback"));
-                String clientId = String.valueOf(body.getOrDefault("client_id", KeycloakOidcEngine.DEFAULT_AUDIENCE));
-                String clientSecret = body.containsKey("client_secret") ? String.valueOf(body.get("client_secret")) : null;
-
-                if (code.isBlank() || codeVerifier.isBlank()) {
-                    sendJson(ex, 400, Map.of(
-                            "error", "MISSING_PKCE_PARAMETERS",
-                            "message", "Both 'code' and 'code_verifier' are mandatory for OAuth 2.0 / OIDC PKCE token exchange (RFC 7636)."
-                    ), null);
-                    return;
-                }
-
-                if (codeVerifier.length() < 43 || codeVerifier.length() > 128) {
-                    sendJson(ex, 400, Map.of(
-                            "error", "INVALID_CODE_VERIFIER",
-                            "message", "RFC 7636 Section 4.1 requires code_verifier length between 43 and 128 characters."
-                    ), null);
-                    return;
-                }
-
-                Optional<Map<String, Object>> tokenRes = KeycloakOidcEngine.exchangeAuthorizationCodeWithPkce(
-                        KeycloakOidcEngine.DEFAULT_ISSUER,
-                        clientId,
-                        clientSecret,
-                        code,
-                        codeVerifier,
-                        redirectUri
-                );
-
-                if (tokenRes.isPresent()) {
-                    sendJson(ex, 200, tokenRes.get(), null);
-                } else {
-                    if (KeycloakOidcEngine.getActiveAuthMode() == KeycloakOidcEngine.AuthMode.KEYCLOAK_PRODUCTION) {
-                        sendJson(ex, 401, Map.of(
-                                "error", "KEYCLOAK_TOKEN_EXCHANGE_FAILED",
-                                "message", "OIDC Authorization Code + PKCE token exchange failed with Keycloak upstream in KEYCLOAK_PRODUCTION mode."
-                        ), null);
-                        return;
-                    }
-
-                    if (!KeycloakOidcEngine.verifyPkceCodeChallenge(code, codeVerifier)) {
-                        sendJson(ex, 400, Map.of(
-                                "error", "INVALID_GRANT",
-                                "message", "PKCE code_verifier does not match code_challenge (RFC 7636 Section 4.6)."
-                        ), null);
-                        return;
-                    }
-
-                    KeycloakOidcEngine.UserAccount user = service.getStore().usersByUsername.getOrDefault("farmer_ba",
-                            new KeycloakOidcEngine.UserAccount("u-01", "farmer_ba", "123456", "Farmer Ba", "farmer.ba@thoihung.vn", "HTX_CANTHO_01", "FARMER"));
-                    String jwt = KeycloakOidcEngine.issueDevMockJwt(user);
-                    Map<String, Object> mockToken = new LinkedHashMap<>();
-                    mockToken.put("access_token", jwt);
-                    mockToken.put("token_type", "Bearer");
-                    mockToken.put("expires_in", 3600);
-                    mockToken.put("flow", "OIDC_AUTHORIZATION_CODE_WITH_PKCE");
-                    mockToken.put("pkce_verified", true);
-                    mockToken.put("user", Map.of("username", user.username(), "role", user.role(), "org_id", user.organizationId()));
-                    sendJson(ex, 200, mockToken, null);
-                }
+                HttpResult res = service.exchangePkceToken(body);
+                sendJson(ex, res.status(), res.body(), null);
                 return;
             }
 

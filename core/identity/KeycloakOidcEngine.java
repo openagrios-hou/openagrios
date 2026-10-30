@@ -655,6 +655,11 @@ public final class KeycloakOidcEngine {
 
 
     ) {
+        public AuthContext(String userId, String username, String organizationId, String role) {
+            this(userId, username, username, username + "@openagrios.vn", organizationId, role, Map.of());
+        }
+
+
 
 
 
@@ -1954,7 +1959,7 @@ public final class KeycloakOidcEngine {
 
         String authUrl = buildPkceAuthorizationUrl(DEFAULT_ISSUER, DEFAULT_AUDIENCE, rUri, challenge, s);
         String authCode = "code-" + UUID.randomUUID().toString().replace("-", "");
-        pendingPkceSessions.put(authCode, new PkceSession(authCode, challenge, "S256", DEFAULT_AUDIENCE, rUri, Instant.now()));
+        pendingPkceSessions.put(authCode, new PkceSession(authCode, challenge, "S256", DEFAULT_AUDIENCE, rUri, s, Instant.now()));
 
 
 
@@ -2158,17 +2163,27 @@ public final class KeycloakOidcEngine {
             String codeChallengeMethod,
             String clientId,
             String redirectUri,
+            String state,
             Instant createdAt
     ) {}
 
     public static final Map<String, PkceSession> pendingPkceSessions = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static boolean verifyPkceCodeChallenge(String code, String codeVerifier) {
+        return verifyPkceCodeChallenge(code, codeVerifier, null);
+    }
+
+    public static boolean verifyPkceCodeChallenge(String code, String codeVerifier, String state) {
         if (codeVerifier == null || codeVerifier.length() < 43 || codeVerifier.length() > 128) {
             return false;
         }
         PkceSession session = pendingPkceSessions.remove(code);
         if (session != null) {
+            if (state != null && !state.isBlank() && session.state() != null && !session.state().isBlank()) {
+                if (!state.equals(session.state())) {
+                    return false; // CSRF state mismatch detection
+                }
+            }
             String computed = generateCodeChallenge(codeVerifier);
             return computed.equals(session.codeChallenge());
         }

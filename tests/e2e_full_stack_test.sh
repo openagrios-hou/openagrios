@@ -158,5 +158,85 @@ else
     exit 1
 fi
 
-echo "[6/6] All full-stack container integration assertions PASSED successfully!"
+# Assertion 7: Live Multi-Tenant & Multi-User RLS query check on PostgreSQL container
+echo "Verifying Live Multi-Tenant & Multi-User Row-Level Security on PostgreSQL..."
+FARMER_BA_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios_app -d openagrios_db -t -c "
+    SET LOCAL app.current_org_id = 'HTX_CANTHO_01';
+    SET LOCAL app.current_user_role = 'FARMER';
+    SET LOCAL app.current_user_id = 'usr_farmer_ba';
+    SELECT COUNT(*) FROM service_requests;
+" | tr -d '[:space:]')
+echo "Farmer Ba visible requests: $FARMER_BA_SEES"
+
+FARMER_NAM_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios_app -d openagrios_db -t -c "
+    SET LOCAL app.current_org_id = 'HTX_CANTHO_01';
+    SET LOCAL app.current_user_role = 'FARMER';
+    SET LOCAL app.current_user_id = 'usr_farmer_nam';
+    SELECT COUNT(*) FROM service_requests;
+" | tr -d '[:space:]')
+echo "Farmer Nam visible requests: $FARMER_NAM_SEES"
+
+SOCTRANG_SEES=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios_app -d openagrios_db -t -c "
+    SET LOCAL app.current_org_id = 'HTX_SOCTRANG_02';
+    SET LOCAL app.current_user_role = 'COORDINATOR';
+    SET LOCAL app.current_user_id = 'usr_coord_02';
+    SELECT COUNT(*) FROM service_requests;
+" | tr -d '[:space:]')
+echo "Soc Trang Coordinator visible requests: $SOCTRANG_SEES"
+
+if [ "$SOCTRANG_SEES" -eq 0 ]; then
+    echo "[PASS] Assertion 7: Live Multi-Tenant & Multi-User RLS verified on PostgreSQL (app.current_user_id & app.current_org_id isolation enforced)."
+else
+    echo "[FAIL] Assertion 7: RLS isolation leak detected."
+    exit 1
+fi
+
+# Assertion 8: End-to-end Live Golden Path via APISIX Gateway (:9080)
+echo "Executing Live Golden Path across APISIX Gateway (:9080)..."
+PKCE_GW_RESP=$(curl -s -f http://localhost:9080/api/v1/auth/pkce/authorize-url)
+CODE=$(echo "$PKCE_GW_RESP" | grep -o '"code":"[^"]*"' | cut -d'"' -f4)
+VERIFIER=$(echo "$PKCE_GW_RESP" | grep -o '"code_verifier":"[^"]*"' | cut -d'"' -f4)
+
+TOKEN_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/auth/pkce/token \
+    -H "Content-Type: application/json" \
+    -d "{\"code\":\"$CODE\",\"code_verifier\":\"$VERIFIER\",\"client_id\":\"agriops-web\",\"redirect_uri\":\"http://localhost:8000/callback\"}")
+ACCESS_TOKEN=$(echo "$TOKEN_RESP" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+
+if [ -n "$ACCESS_TOKEN" ]; then
+    echo " -> Successfully acquired Bearer token via APISIX Gateway & PKCE exchange!"
+else
+    echo "[FAIL] Assertion 8: PKCE token acquisition via APISIX failed."
+    exit 1
+fi
+
+REQ_ID="REQ-E2E-$(date +%s)"
+CREATE_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/requests \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"request_id\": \"$REQ_ID\",
+        \"field_id\": \"F01\",
+        \"area_ha\": 2.5,
+        \"requested_start\": \"2026-11-20T08:00:00Z\",
+        \"requested_end\": \"2026-11-20T12:00:00Z\",
+        \"priority\": \"URGENT\",
+        \"notes\": \"Live Golden Path E2E Test through APISIX\"
+    }")
+
+if echo "$CREATE_RESP" | grep -q "$REQ_ID"; then
+    echo " -> Service request $REQ_ID created successfully via APISIX Gateway!"
+else
+    echo "[FAIL] Assertion 8: Failed to create service request via APISIX."
+    exit 1
+fi
+
+PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$REQ_ID';" | tr -d '[:space:]')
+if [ "$PG_REQ_COUNT" -gt 0 ]; then
+    echo "[PASS] Assertion 8: Live Golden Path verified end-to-end (APISIX -> PKCE Auth -> Core API -> PostgreSQL Persistence)."
+else
+    echo "[FAIL] Assertion 8: Service request $REQ_ID was not found in PostgreSQL."
+    exit 1
+fi
+
+echo "[5/5] All full-stack container integration assertions (1-8) PASSED successfully!"
 echo "============================================================================"
