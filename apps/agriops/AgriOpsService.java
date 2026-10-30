@@ -122,7 +122,7 @@ public final class AgriOpsService {
                     role = String.valueOf(roles.get(0));
                 }
             }
-            String userId = String.valueOf(decoded.getOrDefault("sub", username));
+            String userId = KeycloakOidcEngine.resolveDatabaseUserId(String.valueOf(decoded.getOrDefault("sub", username)), username);
             String orgId = String.valueOf(decoded.getOrDefault("organization_id", "HTX_CANTHO_01"));
             UserAccount liveUser = new UserAccount(userId, username, "******", String.valueOf(decoded.getOrDefault("name", username)), username + "@openagrios.vn", orgId, role);
 
@@ -232,6 +232,7 @@ public final class AgriOpsService {
 
         // 1. Production Mode: upstream Keycloak token endpoint
         if (currentMode == KeycloakOidcEngine.AuthMode.KEYCLOAK_PRODUCTION) {
+            String targetUsername = body.containsKey("username") ? String.valueOf(body.get("username")) : "coord_htx01";
             String keycloakIssuer = System.getenv().getOrDefault("KEYCLOAK_ISSUER", KeycloakOidcEngine.DEFAULT_ISSUER);
             Optional<Map<String, Object>> liveToken = KeycloakOidcEngine.exchangeAuthorizationCodeWithPkce(
                     keycloakIssuer, clientId, clientSecret, code, codeVerifier, redirectUri
@@ -246,7 +247,6 @@ public final class AgriOpsService {
                     ));
                 }
                 // Once verified, authenticate the user session against Keycloak production
-                String targetUsername = body.containsKey("username") ? String.valueOf(body.get("username")) : "coord_htx01";
                 liveToken = KeycloakOidcEngine.tryLiveKeycloakLogin(
                         keycloakIssuer, KeycloakOidcEngine.DEFAULT_AUDIENCE, targetUsername, "123456"
                 );
@@ -278,7 +278,7 @@ public final class AgriOpsService {
                     role = String.valueOf(roles.get(0));
                 }
             }
-            String userId = String.valueOf(decoded.getOrDefault("sub", "keycloak_user"));
+            String userId = KeycloakOidcEngine.resolveDatabaseUserId(String.valueOf(decoded.getOrDefault("sub", targetUsername)), targetUsername);
             String orgId = String.valueOf(decoded.getOrDefault("organization_id", "HTX_CANTHO_01"));
             String username = String.valueOf(decoded.getOrDefault("preferred_username", userId));
             UserAccount liveUser = new UserAccount(userId, username, "******", String.valueOf(decoded.getOrDefault("name", username)), username + "@openagrios.vn", orgId, role);

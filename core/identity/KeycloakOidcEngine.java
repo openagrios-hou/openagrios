@@ -1324,6 +1324,32 @@ public final class KeycloakOidcEngine {
 
 
 
+    public static String resolveDatabaseUserId(String sub, String preferredUsername) {
+        if (sub != null && sub.startsWith("usr_")) {
+            return sub;
+        }
+        if (preferredUsername != null) {
+            switch (preferredUsername) {
+                case "coord_htx01": return "usr_coord_01";
+                case "coord_htx02": return "usr_coord_02";
+                case "farmer_ba": return "usr_farmer_ba";
+                case "farmer_tam": return "usr_farmer_tam";
+                case "farmer_nam": return "usr_farmer_nam";
+                case "op_minh": return "usr_op_minh";
+                case "op_nam": return "usr_op_nam";
+                case "op_hai": return "usr_op_hai";
+                case "op_son": return "usr_op_son";
+                case "owner_tu": return "usr_owner_tu";
+                case "repair_01": return "usr_repair_01";
+                default:
+                    if (!preferredUsername.isBlank()) {
+                        return "usr_" + preferredUsername;
+                    }
+            }
+        }
+        return sub != null ? sub : "usr_unknown";
+    }
+
     public static AuthContext authenticateBearer(String authHeader) {
 
 
@@ -1387,9 +1413,12 @@ public final class KeycloakOidcEngine {
             String orgId = payload.get("organization_id") != null && !String.valueOf(payload.get("organization_id")).isEmpty() && !"null".equals(String.valueOf(payload.get("organization_id")))
                     ? String.valueOf(payload.get("organization_id"))
                     : "HTX_CANTHO_01";
+            String uname = String.valueOf(payload.getOrDefault("preferred_username", payload.get("sub")));
+            String rawSub = String.valueOf(payload.getOrDefault("sub", uname));
+            String resolvedUid = resolveDatabaseUserId(rawSub, uname);
             return new AuthContext(
-                    String.valueOf(payload.getOrDefault("sub", payload.get("preferred_username"))),
-                    String.valueOf(payload.getOrDefault("preferred_username", payload.get("sub"))),
+                    resolvedUid,
+                    uname,
                     String.valueOf(payload.getOrDefault("name", "")),
                     String.valueOf(payload.getOrDefault("email", "")),
                     orgId,
