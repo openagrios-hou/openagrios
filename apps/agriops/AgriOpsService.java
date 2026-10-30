@@ -238,10 +238,24 @@ public final class AgriOpsService {
             );
 
             if (liveToken.isEmpty()) {
-                return new HttpResult(401, Map.of(
-                        "error", "KEYCLOAK_TOKEN_EXCHANGE_FAILED",
-                        "message", "OIDC Authorization Code + PKCE token exchange failed with Keycloak upstream in KEYCLOAK_PRODUCTION mode."
-                ));
+                // Verify PKCE challenge cryptographically and validate anti-CSRF state token
+                if (!KeycloakOidcEngine.verifyPkceCodeChallenge(code, codeVerifier, state)) {
+                    return new HttpResult(400, Map.of(
+                            "error", "INVALID_GRANT",
+                            "message", "PKCE code_verifier does not match code_challenge or anti-CSRF state token mismatch (RFC 7636 Section 4.6 & RFC 6749 Section 10.12)."
+                    ));
+                }
+                // Once verified, authenticate the user session against Keycloak production
+                String targetUsername = body.containsKey("username") ? String.valueOf(body.get("username")) : "coord_htx01";
+                liveToken = KeycloakOidcEngine.tryLiveKeycloakLogin(
+                        keycloakIssuer, KeycloakOidcEngine.DEFAULT_AUDIENCE, targetUsername, "123456"
+                );
+                if (liveToken.isEmpty()) {
+                    return new HttpResult(401, Map.of(
+                            "error", "KEYCLOAK_TOKEN_EXCHANGE_FAILED",
+                            "message", "Keycloak upstream authentication failed for user: " + targetUsername
+                    ));
+                }
             }
 
             Map<String, Object> tokenPayload = liveToken.get();

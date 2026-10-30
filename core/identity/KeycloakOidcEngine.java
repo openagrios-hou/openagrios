@@ -2076,8 +2076,7 @@ public final class KeycloakOidcEngine {
             String computed = generateCodeChallenge(codeVerifier);
             return computed.equals(session.codeChallenge());
         }
-        // Fallback for mock testing without pre-generated session
-        return true;
+        return false;
     }
 }
 
