@@ -204,7 +204,7 @@ else
 fi
 
 # 2. Acquire Live Keycloak OIDC Token through APISIX Gateway (verified against Keycloak upstream)
-AUTH_RESP=$(curl -s -f -X POST http://localhost:9080/api/v1/auth/login \
+AUTH_RESP=$(curl -s -X POST http://localhost:9080/api/v1/auth/login \
     -H "Content-Type: application/json" \
     -d '{"username":"coord_htx01","password":"123456"}')
 ACCESS_TOKEN=$(echo "$AUTH_RESP" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
@@ -212,16 +212,18 @@ ACCESS_TOKEN=$(echo "$AUTH_RESP" | grep -o '"access_token":"[^"]*"' | cut -d'"' 
 if [ -n "$ACCESS_TOKEN" ]; then
     echo " -> Successfully acquired Live Keycloak Bearer token via APISIX Gateway!"
 else
+    echo "Keycloak auth response: $AUTH_RESP"
     echo "[FAIL] Assertion 8: Live Keycloak token acquisition failed."
     exit 1
 fi
 
 # 3. Access Protected Core API through APISIX (exercises APISIX token introspection with Keycloak)
-STATE_RESP=$(curl -s -f http://localhost:9080/api/v1/state \
+STATE_RESP=$(curl -s http://localhost:9080/api/v1/state \
     -H "Authorization: Bearer $ACCESS_TOKEN")
 if echo "$STATE_RESP" | grep -q '"organization_name"'; then
     echo " -> APISIX token introspection with Keycloak succeeded; protected state accessed!"
 else
+    echo "Protected state response: $STATE_RESP"
     echo "[FAIL] Assertion 8: APISIX Zero-Trust introspection failed on /api/v1/state."
     exit 1
 fi

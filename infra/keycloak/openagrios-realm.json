@@ -100,12 +100,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "FARMER"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "coord_htx01",
@@ -123,12 +125,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "COORDINATOR"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "op_minh",
@@ -146,12 +150,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "OPERATOR"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "op_nam",
@@ -169,12 +175,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "OPERATOR"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "owner_tu",
@@ -192,12 +200,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "MACHINE_OWNER"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "repair_01",
@@ -215,12 +225,14 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "REPAIR_TEAM"
-      ]
+      ],
+      "requiredActions": []
     },
     {
       "username": "coord_htx02",
@@ -238,12 +250,49 @@
         {
           "type": "password",
           "value": "123456",
-          "temporary": false
+          "temporary": false,
+          "createdDate": 1700000000000
         }
       ],
       "realmRoles": [
         "COORDINATOR"
-      ]
+      ],
+      "requiredActions": []
+    }
+  ],
+  "verifyEmail": false,
+  "requiredActions": [
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 50
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 40
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 30
+    },
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 10
     }
   ]
 }
