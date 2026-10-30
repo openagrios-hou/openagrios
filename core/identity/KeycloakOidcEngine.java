@@ -1604,123 +1604,41 @@ public final class KeycloakOidcEngine {
      */
     @Deprecated(since = "0.1.0-alpha", forRemoval = false)
     public static Optional<Map<String, Object>> tryLiveKeycloakLogin(
-
-
-
             String keycloakIssuerUrl,
-
-
-
             String clientId,
-
-
-
             String username,
-
-
-
             String password
-
-
-
     ) {
-
-
-
         try {
-
-
-
             String tokenEndpoint = keycloakIssuerUrl.replaceAll("/+$", "") + "/protocol/openid-connect/token";
-
-
+            String targetClientId = clientId != null && !clientId.isBlank() ? clientId : "agriops-web";
 
             String formBody = "grant_type=password"
-                    + "&client_id=" + URLEncoder.encode(clientId != null ? clientId : "agriops-web", StandardCharsets.UTF_8)
-                    + "&client_secret=" + URLEncoder.encode(DEFAULT_CLIENT_SECRET, StandardCharsets.UTF_8)
-
-
-
                     + "&username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)
-
-
-
                     + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
+                    + "&scope=" + URLEncoder.encode("openid profile email", StandardCharsets.UTF_8);
 
-
-
-                    + "&scope=" + URLEncoder.encode("openid profile email organization_id", StandardCharsets.UTF_8);
-
-
-
-
-
-
-
-            HttpRequest req = HttpRequest.newBuilder()
-
-
-
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(tokenEndpoint))
-
-
-
                     .header("Content-Type", "application/x-www-form-urlencoded")
+                    .timeout(Duration.ofSeconds(4));
 
-
-
-                    .timeout(Duration.ofSeconds(3))
-
-
-
-                    .POST(HttpRequest.BodyPublishers.ofString(formBody))
-
-
-
-                    .build();
-
-
-
-
-
-
-
-            HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
-
-
-
-            if (resp.statusCode() == 200) {
-
-
-
-                Map<String, Object> parsed = JsonCodec.parseObject(resp.body());
-
-
-
-                return Optional.of(parsed);
-
-
-
+            if (DEFAULT_CLIENT_SECRET != null && !DEFAULT_CLIENT_SECRET.isBlank()) {
+                String creds = targetClientId + ":" + DEFAULT_CLIENT_SECRET;
+                reqBuilder.header("Authorization", "Basic " + Base64.getEncoder().encodeToString(creds.getBytes(StandardCharsets.UTF_8)));
+            } else {
+                formBody += "&client_id=" + URLEncoder.encode(targetClientId, StandardCharsets.UTF_8);
             }
 
-
-
+            HttpRequest req = reqBuilder.POST(HttpRequest.BodyPublishers.ofString(formBody)).build();
+            HttpResponse<String> resp = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                Map<String, Object> parsed = JsonCodec.parseObject(resp.body());
+                return Optional.of(parsed);
+            }
         } catch (Exception ignored) {
-
-
-
-            // Live Keycloak not reachable
-
-
-
         }
-
-
-
         return Optional.empty();
-
-
-
     }
 
 
