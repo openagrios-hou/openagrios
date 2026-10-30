@@ -546,7 +546,9 @@ public final class AgriOpsService {
             return new HttpResult(403, err);
         }
 
-        String reqId = "REQ-" + shortUuid();
+        String reqId = (body.containsKey("request_id") && !String.valueOf(body.get("request_id")).isBlank())
+                ? String.valueOf(body.get("request_id")).trim()
+                : "REQ-" + shortUuid();
         String prcId = "PRC-" + reqId;
         String corrId = "CORR-" + fieldId + "-" + shortUuid();
         String ts = nowIso();

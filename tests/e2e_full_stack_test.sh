@@ -281,8 +281,9 @@ CREATE_RESP=$(curl -s -X POST http://localhost:9080/api/v1/requests \
         \"notes\": \"Live Golden Path E2E Test through APISIX and RFC 7636 PKCE\"
     }")
 
-if echo "$CREATE_RESP" | grep -q "$REQ_ID"; then
-    echo "    [OK] Service request $REQ_ID created successfully via APISIX Gateway!"
+CREATED_REQ_ID=$(echo "$CREATE_RESP" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
+if [ -n "$CREATED_REQ_ID" ] && echo "$CREATE_RESP" | grep -q '"ok":true'; then
+    echo "    [OK] Service request $CREATED_REQ_ID created successfully via APISIX Gateway!"
 else
     echo "Create request response: $CREATE_RESP"
     echo "[FAIL] Assertion 8: Failed to create service request via APISIX."
@@ -291,7 +292,7 @@ fi
 
 # 7. Step 7: Verify the record is persisted into PostgreSQL
 echo " -> Step 6: Verifying record persistence in PostgreSQL database..."
-PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$REQ_ID';" | grep -o '[0-9]\+' | tail -n 1)
+PG_REQ_COUNT=$(docker compose -f compose.yaml exec -T postgres psql -U openagrios -d openagrios_db -t -c "SELECT COUNT(*) FROM service_requests WHERE request_id='$CREATED_REQ_ID';" | grep -o '[0-9]\+' | tail -n 1)
 if [ "$PG_REQ_COUNT" -gt 0 ]; then
     echo "[PASS] Assertion 8: Live Golden Path verified end-to-end (APISIX -> RFC 7636 PKCE Session -> Keycloak OIDC -> APISIX Zero-Trust Introspection -> Core API -> PostgreSQL Persistence)."
 else
