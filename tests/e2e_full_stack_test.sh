@@ -237,12 +237,13 @@ PKCE_STATE_VALID="csrf-valid-$(date +%s)"
 PKCE_FRESH_RESP=$(curl -s -f "http://localhost:9080/api/v1/auth/pkce/authorize-url?state=$PKCE_STATE_VALID")
 AUTH_CODE_VALID=$(echo "$PKCE_FRESH_RESP" | sed -n 's/.*"code":"\([^"]*\)".*/\1/p')
 CODE_VERIFIER_VALID=$(echo "$PKCE_FRESH_RESP" | sed -n 's/.*"code_verifier":"\([^"]*\)".*/\1/p')
+AUTH_STATE_VALID=$(echo "$PKCE_FRESH_RESP" | sed -n 's/.*"state":"\([^"]*\)".*/\1/p')
 
 # 4. Step 4: Exchange Authorization Code + valid code_verifier for Live Keycloak Token via APISIX Gateway
 echo " -> Step 3: Exchanging valid Authorization Code + PKCE code_verifier for Live Keycloak Token..."
 TOKEN_EXCHANGE_RESP=$(curl -s -X POST http://localhost:9080/api/v1/auth/pkce/token \
     -H "Content-Type: application/json" \
-    -d "{\"code\":\"$AUTH_CODE_VALID\",\"code_verifier\":\"$CODE_VERIFIER_VALID\",\"state\":\"$PKCE_STATE_VALID\",\"username\":\"coord_htx01\"}")
+    -d "{\"code\":\"$AUTH_CODE_VALID\",\"code_verifier\":\"$CODE_VERIFIER_VALID\",\"state\":\"$AUTH_STATE_VALID\",\"username\":\"coord_htx01\"}")
 
 ACCESS_TOKEN=$(echo "$TOKEN_EXCHANGE_RESP" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
 if [ -z "$ACCESS_TOKEN" ]; then

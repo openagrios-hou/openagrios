@@ -386,6 +386,23 @@ public final class OpenAgriOsServer {
 
 
 
+        private static Map<String, String> parseQueryParams(String query) {
+            Map<String, String> map = new LinkedHashMap<>();
+            if (query == null || query.isBlank()) {
+                return map;
+            }
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=", 2);
+                if (pair.length == 2) {
+                    map.put(java.net.URLDecoder.decode(pair[0], StandardCharsets.UTF_8),
+                            java.net.URLDecoder.decode(pair[1], StandardCharsets.UTF_8));
+                } else if (pair.length == 1 && !pair[0].isBlank()) {
+                    map.put(java.net.URLDecoder.decode(pair[0], StandardCharsets.UTF_8), "");
+                }
+            }
+            return map;
+        }
+
         private void handleGet(HttpExchange ex, String path) throws IOException {
 
 
@@ -594,7 +611,10 @@ public final class OpenAgriOsServer {
             
             if ("/api/v1/auth/pkce/authorize-url".equals(path)) {
 
-                sendJson(ex, 200, KeycloakOidcEngine.generatePkceSession("http://localhost:8000/callback", null), null);
+                Map<String, String> params = parseQueryParams(ex.getRequestURI().getRawQuery());
+                String stateParam = params.get("state");
+                String rUriParam = params.getOrDefault("redirect_uri", "http://localhost:8000/callback");
+                sendJson(ex, 200, KeycloakOidcEngine.generatePkceSession(rUriParam, stateParam), null);
 
                 return;
 
