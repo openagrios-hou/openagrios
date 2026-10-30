@@ -105,7 +105,7 @@ public final class AgriOpsService {
             String token = String.valueOf(liveToken.get().get("access_token"));
             Map<String, Object> decoded;
             try {
-                decoded = KeycloakOidcEngine.verifyJwt(token);
+                decoded = KeycloakOidcEngine.verifyJwt(token, keycloakIssuer, KeycloakOidcEngine.DEFAULT_AUDIENCE);
             } catch (Exception ex) {
                 Map<String, Object> err = new LinkedHashMap<>();
                 err.put("error", "KEYCLOAK_INTROSPECTION_FAILED");
@@ -248,7 +248,7 @@ public final class AgriOpsService {
             String token = String.valueOf(tokenPayload.get("access_token"));
             Map<String, Object> decoded;
             try {
-                decoded = KeycloakOidcEngine.verifyJwt(token);
+                decoded = KeycloakOidcEngine.verifyJwt(token, keycloakIssuer, KeycloakOidcEngine.DEFAULT_AUDIENCE);
             } catch (Exception ex) {
                 return new HttpResult(401, Map.of(
                         "error", "KEYCLOAK_INTROSPECTION_FAILED",

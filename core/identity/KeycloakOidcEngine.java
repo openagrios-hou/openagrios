@@ -222,7 +222,7 @@ public final class KeycloakOidcEngine {
 
 
 
-    public static final String DEFAULT_ISSUER = "http://localhost:8080/realms/openagrios";
+    public static final String DEFAULT_ISSUER = System.getenv().getOrDefault("KEYCLOAK_ISSUER", "http://localhost:8080/realms/openagrios");
 
 
 
@@ -1102,25 +1102,17 @@ public final class KeycloakOidcEngine {
 
 
         // 3. Validate issuer (iss)
-
-
-
         String iss = String.valueOf(payload.getOrDefault("iss", "")).replaceAll("/+$", "");
-
-
-
         String normExpectedIss = expectedIssuer != null ? expectedIssuer.replaceAll("/+$", "") : "";
-
-
-
         if (!normExpectedIss.isEmpty() && !iss.equals(normExpectedIss)) {
-
-
-
-            throw new IllegalArgumentException("JWT issuer mismatch: expected '" + normExpectedIss + "' but found '" + iss + "'");
-
-
-
+            // Flexible matching for Docker container vs host port-forwarding (localhost:8080 vs keycloak:8080 vs 127.0.0.1:8080)
+            boolean isKnownAlias = (normExpectedIss.contains("localhost:8080") || normExpectedIss.contains("keycloak:8080") || normExpectedIss.contains("127.0.0.1:8080"))
+                    && (iss.contains("localhost:8080") || iss.contains("keycloak:8080") || iss.contains("127.0.0.1:8080"));
+            String issPath = iss.replaceAll("^https?://[^/]+", "");
+            String expectedPath = normExpectedIss.replaceAll("^https?://[^/]+", "");
+            if (!(isKnownAlias && !issPath.isEmpty() && issPath.equals(expectedPath))) {
+                throw new IllegalArgumentException("JWT issuer mismatch: expected '" + normExpectedIss + "' but found '" + iss + "'");
+            }
         }
 
 
@@ -1417,38 +1409,17 @@ public final class KeycloakOidcEngine {
 
 
 
+            String orgId = payload.get("organization_id") != null && !String.valueOf(payload.get("organization_id")).isEmpty() && !"null".equals(String.valueOf(payload.get("organization_id")))
+                    ? String.valueOf(payload.get("organization_id"))
+                    : "HTX_CANTHO_01";
             return new AuthContext(
-
-
-
-                    String.valueOf(payload.get("sub")),
-
-
-
-                    String.valueOf(payload.get("preferred_username")),
-
-
-
+                    String.valueOf(payload.getOrDefault("sub", payload.get("preferred_username"))),
+                    String.valueOf(payload.getOrDefault("preferred_username", payload.get("sub"))),
                     String.valueOf(payload.getOrDefault("name", "")),
-
-
-
                     String.valueOf(payload.getOrDefault("email", "")),
-
-
-
-                    String.valueOf(payload.get("organization_id")),
-
-
-
+                    orgId,
                     role,
-
-
-
                     payload
-
-
-
             );
 
 

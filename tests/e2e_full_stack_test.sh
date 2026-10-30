@@ -213,6 +213,7 @@ if [ -z "$ACCESS_TOKEN" ]; then
     echo "Gateway auth returned: $AUTH_RESP. Acquiring OIDC token directly from Keycloak realm..."
     KC_TOKEN_RESP=$(curl -s -X POST http://localhost:8080/realms/openagrios/protocol/openid-connect/token \
         -H "Content-Type: application/x-www-form-urlencoded" \
+        -H "Host: keycloak:8080" \
         -u "agriops-web:agriops-client-secret-2026" \
         -d "grant_type=password&username=coord_htx01&password=123456&scope=openid+profile+email")
     ACCESS_TOKEN=$(echo "$KC_TOKEN_RESP" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
