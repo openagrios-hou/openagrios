@@ -414,6 +414,18 @@ services:
 
 
 
+      FLOWABLE_REST_USER: ${FLOWABLE_REST_USER:-rest-admin}
+
+
+
+      FLOWABLE_REST_PASSWORD: ${FLOWABLE_REST_PASSWORD:-test}
+
+
+
+      OPENAGRIOS_WORKFLOW_MODE: ${OPENAGRIOS_WORKFLOW_MODE:-FLOWABLE_PRODUCTION}
+
+
+
       DATABASE_URL: jdbc:postgresql://postgres:5432/openagrios_db
 
 
@@ -463,6 +475,14 @@ services:
 
 
       object-storage:
+
+
+
+        condition: service_started
+
+
+
+      flowable:
 
 
 

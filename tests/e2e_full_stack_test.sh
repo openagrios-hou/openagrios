@@ -63,7 +63,18 @@ for i in {1..20}; do
     sleep 2
 done
 
-# 4. Core API (Port 8000)
+# 4. Flowable BPMN Engine (Port 8081)
+echo "Waiting for Flowable REST BPMN Engine..."
+for i in {1..30}; do
+    if curl -s -f -u rest-admin:test http://localhost:8081/flowable-rest/service/repository/deployments >/dev/null 2>&1; then
+        echo " -> Flowable REST Engine is online!"
+        break
+    fi
+    echo " ... waiting for Flowable ($i/30)"
+    sleep 2
+done
+
+# 5. Core API (Port 8000)
 echo "Waiting for OpenAgriOS Core API..."
 for i in {1..30}; do
     if curl -s -f http://localhost:8000/api/v1/health >/dev/null 2>&1; then
@@ -74,7 +85,7 @@ for i in {1..30}; do
     sleep 2
 done
 
-# 5. APISIX Zero-Trust Gateway (Port 9080)
+# 6. APISIX Zero-Trust Gateway (Port 9080)
 echo "Waiting for APISIX Gateway..."
 for i in {1..30}; do
     if curl -s -f http://localhost:9080/api/v1/health >/dev/null 2>&1; then
@@ -138,5 +149,14 @@ else
     exit 1
 fi
 
-echo "[5/5] All full-stack container integration assertions PASSED successfully!"
+# Assertion 6: Flowable REST Engine deployment verification
+FLOWABLE_DEPLOYMENTS=$(curl -s -u rest-admin:test http://localhost:8081/flowable-rest/service/repository/deployments)
+if echo "$FLOWABLE_DEPLOYMENTS" | grep -q '"data"'; then
+    echo "[PASS] Assertion 6: Flowable REST Engine v7.0.0 is online and process definitions deployed."
+else
+    echo "[FAIL] Assertion 6: Flowable REST deployments query failed."
+    exit 1
+fi
+
+echo "[6/6] All full-stack container integration assertions PASSED successfully!"
 echo "============================================================================"
